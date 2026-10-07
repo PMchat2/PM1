@@ -11,6 +11,15 @@ import time
 from datetime import datetime
 from urllib.parse import urlparse
 
+# ==================== 关键修复 1：pycryptodome CFFI 崩溃补丁 ====================
+# 必须在 import Crypto 之前执行，否则在 Android 上会因 CFFI 优化问题崩溃。
+# 参考：https://github.com/kivy/python-for-android/issues/1866
+import ctypes
+try:
+    ctypes.pythonapi = ctypes.PyDLL("libpython%d.%d.so" % sys.version_info[:2])
+except Exception:
+    pass  # 桌面环境无需此补丁，忽略异常
+
 # ---- Android SSL 证书处理（必须在 import requests 之前）----
 from kivy.utils import platform
 if platform == 'android':
@@ -31,11 +40,12 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.properties import (
-    StringProperty, BooleanProperty, NumericProperty, ListProperty
+    StringProperty, BooleanProperty, ListProperty
 )
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
+from kivy.uix.button import Button
 from kivy.core.clipboard import Clipboard
 
 # ==================== 配置 ====================
@@ -504,7 +514,6 @@ class PrivateBinApp(App):
         self._switch_mode('client')
 
     def on_stop(self):
-        # 退出时清理主端房间
         info = self.paste_info
         self.paste_info = None
         if info and info.get("deletetoken"):
@@ -700,7 +709,6 @@ class PrivateBinApp(App):
             text='删除后所有聊天记录将被永久销毁，客端将无法再访问该聊天室，'
                  '且无法恢复。\n\n确定要删除吗？'))
         btn_box = BoxLayout(size_hint_y=None, height='48dp', spacing=10)
-        from kivy.uix.button import Button
         yes_btn = Button(text='删除', background_color=(0.8, 0.2, 0.2, 1))
         no_btn = Button(text='取消')
         btn_box.add_widget(yes_btn)
@@ -936,7 +944,6 @@ class PrivateBinApp(App):
                 lines.append('')
         self.comments_text = '\n'.join(lines)
         self.status_text = f'已同步 ({len(comments)} 条消息)'
-        # 滚动到底部
         try:
             sv = self.root_widget.ids.get('comments_scroll')
             if sv is not None:
