@@ -11,14 +11,15 @@ import time
 from datetime import datetime
 from urllib.parse import urlparse
 
-# ==================== 关键修复 1：pycryptodome CFFI 崩溃补丁 ====================
-# 必须在 import Crypto 之前执行，否则在 Android 上会因 CFFI 优化问题崩溃。
-# 参考：https://github.com/kivy/python-for-android/issues/1866
+# ==================== 关键修复：pycryptodome CFFI 崩溃补丁 ====================
 import ctypes
 try:
     ctypes.pythonapi = ctypes.PyDLL("libpython%d.%d.so" % sys.version_info[:2])
 except Exception:
-    pass  # 桌面环境无需此补丁，忽略异常
+    pass
+
+# ---- 关键修复：强制指定 OpenGL 渲染后端，解决黑屏问题 ----
+os.environ['KIVY_GL_BACKEND'] = 'angle_sdl2'
 
 # ---- Android SSL 证书处理（必须在 import requests 之前）----
 from kivy.utils import platform
